@@ -1,3 +1,29 @@
+# Copyright 2018 Simon Davy
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+# WARNING: the code in the gist generates self-signed certs, for the purposes of testing in development.
+# Do not use these certs in production, or You Will Have A Bad Time.
+#
+# Caveat emptor
+
+import os
 import ipaddress
 from typing import Optional
 from datetime import datetime, timedelta
@@ -8,13 +34,15 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.serialization import load_pem_private_key
 
 
-def generate_selfsigned_cert(hostname, ip_addresses=None, key: Optional[rsa.RSAPrivateKey] = None):
+def generate_selfsigned_cert(hostname, ip_addresses=None, key_path: Optional[str] = 'certs/key.pem'):
     """Generates self-signed certificate for a hostname, and optional IP addresses."""
 
     # Generate our key
-    if key is None:
+    if key_path is None or not os.path.exists(key_path):
+        print("Key file not exists")
         key = rsa.generate_private_key(
             public_exponent=65537,
             key_size=2048,
@@ -28,6 +56,11 @@ def generate_selfsigned_cert(hostname, ip_addresses=None, key: Optional[rsa.RSAP
             )
             f.write(key_pem)
     else:
+        print("Key file exists")
+
+        with open(key_path, 'rb') as key_file:
+            pem_data = key_file.read()
+        key = load_pem_private_key(pem_data, password=b"passphrase")
         key_pem = key.private_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PrivateFormat.TraditionalOpenSSL,
@@ -68,6 +101,6 @@ def generate_selfsigned_cert(hostname, ip_addresses=None, key: Optional[rsa.RSAP
         .sign(key, hashes.SHA256(), default_backend())
     )
     cert_pem = cert.public_bytes(encoding=serialization.Encoding.PEM)
-    with open("path/to/csr.pem", "wb") as f:
+    with open("certs/csr.pem", "wb") as f:
         f.write(cert_pem)
     return cert_pem, key_pem

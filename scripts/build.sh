@@ -3,7 +3,7 @@ IFS=
 
 if ! command -v "docker compose" > /dev/null;
   then
-    docker compose --env-file ./.env up --detach --build
+    docker compose up --detach --build
   else
-    docker-compose --env-file ./.env up --detach --build
+    docker-compose up --detach --build
 fi
